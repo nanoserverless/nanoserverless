@@ -21,19 +21,46 @@ app.use(morgan('combined'));
 
 app.get('/function', function (req, res) {
   res.send('NanoServerLess');
-})
+});
 
-app.get('/function/create/:base', function (req, res) {
+var dockerfiles = {
+  "php7": {
+    "from": "php:7",
+    "file": "app.php",
+    "cmd": "php",
+    "precode": '<?php\nparse_str($argv[1], $params);',
+    "postcode": '?>'
+  },
+  "node7": {
+    "from": "node:7",
+    "file": "app.js",
+    "cmd": "node",
+    "precode": 'var querystring = require(\'querystring\');\nvar params = querystring.parse(process.argv[2]);'
+  }
+};
+
+app.get('/create/:base/:name', function (req, res) {
   var base = req.params.base;
+  var name = req.params.name;
+
+  var pack = tar.pack();
+  var dockerfile =
+    'FROM ' + dockerfiles[base].from +
+    '\nCOPY ' + dockerfiles[base].file + ' /' +
+    '\nENTRYPOINT ["' + dockerfiles[base].cmd + '", "' + dockerfiles[base].file + '"]';
+  pack.entry({ name: 'Dockerfile'}, dockerfile);
 
   // Test tar from pipe
-  var code = 'phpinfo();';
-  var pack = tar.pack();
-  pack.entry({ name: 'Dockerfile' }, 'FROM	php:7\nCOPY app.php /\nENTRYPOINT ["php", "app.php"]');
-  pack.entry({ name: 'app.php' }, '<?php\n' + code + '\n?>');
+  var code = 'var_dump($params);';
+  if (base === "node7") code = 'console.log(JSON.stringify(params));';
+  pack.entry({ name: dockerfiles[base].file}, dockerfiles[base].precode + '\n' + code + '\n' + dockerfiles[base].postcode);
   pack.finalize();
+
+  // Tag
+  var tag = tagprefix + base + '-' + name;
+
   pack.pipe(zlib.createGzip()).pipe(concat(function (file) {
-    var opts = {t: tagprefix + "montag", nocache: "true"};
+    var opts = {t: tag, nocache: "true"};
     var optsf = {
       path: '/build?',
       method: 'POST',
@@ -54,20 +81,29 @@ app.get('/function/create/:base', function (req, res) {
     });
 
     modem.dial(optsf, function(err, data) {
-      modem.followProgress(data, onFinished, onProgress);
-      function onFinished(err, output) {
-        res.end();
-      }
-      function onProgress(err, output) {
-        res.write(err.stream);
-      }
+      modem.followProgress(data,
+        function(err, output) {
+          // Finished
+          res.end();
+        },
+        function(err, output) {
+          // Progress
+          if (err.stream) res.write(err.stream);
+        }
+      );
     });
   }));
 })
 
-app.get('/function/exec/:tag', function (req, res) {
-  var tag = req.params.tag;
-  docker.run(tagprefix + tag, [querystring.stringify(req.query)], res, function (err, data, container) { });
+app.get('/exec/:base/:name', function (req, res) {
+  var base = req.params.base;
+  var name = req.params.name;
+  var tag = tagprefix + base + '-' + name;
+  //docker.run(tag, req.query, res, function (err, data, container) {
+  //docker.run(tag, ["param1"], res, function (err, data, container) {
+  docker.run(tag, querystring.stringify(req.query), res, function (err, data, container) {
+    console.log(err);
+  });
 });
 
 app.listen(3000, function () {

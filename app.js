@@ -99,6 +99,7 @@ app.post('/create/:base/:name', function (req, res) {
       'Transfer-Encoding': 'chunked'
     });
 
+    console.log('Creating ' + tag);
     modem.dial(optsf, function(err, data) {
       modem.followProgress(data,
         function(err, output) {
@@ -118,8 +119,10 @@ app.get('/exec/:base/:name', function (req, res) {
   var base = req.params.base;
   var name = req.params.name;
   var tag = tagprefix + base + '-' + name;
-  docker.run(tag, querystring.stringify(req.query), res, function (err, data, container) {
-    console.log(err);
+  console.log('Running ' + tag);
+  docker.run(tag, querystring.stringify(req.query), res, {}, function (err, data, container) {
+    // Remove container
+    docker.getContainer(container.id).remove({}, function(err, data) { });
   });
 });
 

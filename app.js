@@ -7,6 +7,8 @@ var dockermodem = require('docker-modem');
 var zlib = require('zlib');
 var concat = require('concat-stream');
 
+var tagprefix = 'nanoserverless-';
+
 // Docker modem
 var modem = new dockermodem();
 
@@ -31,7 +33,7 @@ app.get('/function/create/:base', function (req, res) {
   pack.entry({ name: 'app.php' }, '<?php\n' + code + '\n?>');
   pack.finalize();
   pack.pipe(zlib.createGzip()).pipe(concat(function (file) {
-    var opts = {t: "montag", nocache: "true"};
+    var opts = {t: tagprefix + "montag", nocache: "true"};
     var optsf = {
       path: '/build?',
       method: 'POST',
@@ -65,7 +67,7 @@ app.get('/function/create/:base', function (req, res) {
 
 app.get('/function/exec/:tag', function (req, res) {
   var tag = req.params.tag;
-  docker.run(tag, [querystring.stringify(req.query)], res, function (err, data, container) { });
+  docker.run(tagprefix + tag, [querystring.stringify(req.query)], res, function (err, data, container) { });
 });
 
 app.listen(3000, function () {

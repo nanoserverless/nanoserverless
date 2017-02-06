@@ -37,7 +37,7 @@ app.use(function(req, res, next) {
 });
 
 
-app.get('/function', function (req, res) {
+app.get('/', function (req, res) {
   res.send('NanoServerLess');
 });
 
@@ -57,7 +57,7 @@ var dockerfiles = {
   }
 };
 
-app.get('/create/:base/:name', function (req, res) {
+app.post('/create/:base/:name', function (req, res) {
   var base = req.params.base;
   var name = req.params.name;
 
@@ -69,6 +69,7 @@ app.get('/create/:base/:name', function (req, res) {
   pack.entry({ name: 'Dockerfile'}, dockerfile);
 
   // Test tar from pipe
+  console.log(req.rawBody);
   var code = '';
   if (req.rawBody) code = req.rawBody;
   pack.entry({ name: dockerfiles[base].file}, dockerfiles[base].precode + '\n' + code + '\n' + dockerfiles[base].postcode);

@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/WTFKr0/nanoserverless.git"
+    "url": "git+https://github.com/nanoserverless/nanoserverless.git"
   },
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/WTFKr0/nanoserverless/issues"
+    "url": "https://github.com/nanoserverless/nanoserverless/issues"
   },
-  "homepage": "https://github.com/WTFKr0/nanoserverless#readme",
+  "homepage": "https://github.com/nanoserverless/nanoserverless#readme",
   "dependencies": {
     "concat-stream": "^1.6.0",
     "docker-modem": "^0.3.4",

@@ -17,9 +17,14 @@
   },
   "homepage": "https://github.com/WTFKr0/nanoserverless#readme",
   "dependencies": {
+    "concat-stream": "^1.6.0",
+    "docker-modem": "^0.3.4",
     "dockerode": "^2.3.1",
     "express": "^4.14.1",
     "morgan": "^1.7.0",
-    "querystring": "^0.2.0"
+    "querystring": "^0.2.0",
+    "tar-fs": "^1.15.0",
+    "tar-stream": "^1.5.2",
+    "zlib": "^1.0.5"
   }
 }

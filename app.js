@@ -1,7 +1,7 @@
 var express = require('express');
 var morgan = require('morgan');
 var querystring = require('querystring');
-var dockeroder = require('dockerode');
+var dockerode = require('dockerode');
 
 var app = express();
 

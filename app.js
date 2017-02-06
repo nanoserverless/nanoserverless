@@ -7,6 +7,7 @@ var dockermodem = require('docker-modem');
 var zlib = require('zlib');
 var concat = require('concat-stream');
 
+// Globals
 var tagprefix = 'nanoserverless-';
 
 // Docker modem
@@ -18,6 +19,23 @@ var docker = new dockerode();
 // Express
 var app = express();
 app.use(morgan('combined'));
+app.use(function(req, res, next) {
+  var contentType = req.headers['content-type'] || ''
+  , mime = contentType.split(';')[0];
+  if (mime != 'text/plain') {
+    return next();
+  }
+  var data = '';
+  req.setEncoding('utf8');
+  req.on('data', function(chunk) {
+    data += chunk;
+  });
+  req.on('end', function() {
+    req.rawBody = data;
+    next();
+  });
+});
+
 
 app.get('/function', function (req, res) {
   res.send('NanoServerLess');
@@ -51,8 +69,8 @@ app.get('/create/:base/:name', function (req, res) {
   pack.entry({ name: 'Dockerfile'}, dockerfile);
 
   // Test tar from pipe
-  var code = 'var_dump($params);';
-  if (base === "node7") code = 'console.log(JSON.stringify(params));';
+  var code = '';
+  if (req.rawBody) code = req.rawBody;
   pack.entry({ name: dockerfiles[base].file}, dockerfiles[base].precode + '\n' + code + '\n' + dockerfiles[base].postcode);
   pack.finalize();
 
@@ -99,8 +117,6 @@ app.get('/exec/:base/:name', function (req, res) {
   var base = req.params.base;
   var name = req.params.name;
   var tag = tagprefix + base + '-' + name;
-  //docker.run(tag, req.query, res, function (err, data, container) {
-  //docker.run(tag, ["param1"], res, function (err, data, container) {
   docker.run(tag, querystring.stringify(req.query), res, function (err, data, container) {
     console.log(err);
   });

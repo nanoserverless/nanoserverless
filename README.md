@@ -1,6 +1,6 @@
 # nanoserverless
 
-## Up in less than 1 minute
+## Up in seconds
 ```
 docker run -d \
   -p 1664:3000 \

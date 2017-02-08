@@ -1,1 +1,6 @@
-docker build -t nanoserverless-build -f Dockerfile.build .
+docker build \
+	-t nanoserverless-build \
+	-f Dockerfile.build \
+	--build-arg http_proxy=$http_proxy \
+	--build-arg https_proxy=$https_proxy \
+	.

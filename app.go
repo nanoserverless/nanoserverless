@@ -1,23 +1,25 @@
 package main
 
 import (
+	"archive/tar"
+	"bytes"
+	"context"
 	"flag"
 	"fmt"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+	"github.com/gorilla/mux"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
-	"context"
-	"github.com/gorilla/mux"
-	"github.com/docker/docker/client"
-	"github.com/docker/docker/api/types"
-	"archive/tar"
-	"bytes"
 )
 
 var port string
 var dockercli, err = client.NewClient("unix:///var/run/docker.sock", "v1.25", nil, map[string]string{"User-Agent": "nanoserverless"})
+var tagprefix = "nanoserverless"
 
 func init() {
 	flag.StringVar(&port, "port", "80", "give me a port number")
@@ -33,7 +35,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/whoami", whoami)
 	r.HandleFunc("/create/{base}/{name}", create)
-        http.Handle("/", r)
+	http.Handle("/", r)
 	fmt.Println("Starting up on port " + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
@@ -59,17 +61,32 @@ func create(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	base := vars["base"]
 	name := vars["name"]
-	fmt.Fprintln(w, "base:", base)
-	fmt.Fprintln(w, "name:", name)
-	fmt.Fprintln(w, "docker cli:", dockercli.ClientVersion())
+	tag := tagprefix + "-" + base + "-" + name
+	bodyb, _ := ioutil.ReadAll(req.Body)
+	body := string(bodyb)
 
-	containers, err := dockercli.ContainerList(context.Background(), types.ContainerListOptions{})
-	if err != nil {
-		panic(err)
+	// Generate dockerfile
+	dockerfile := "FROM "
+	if base == "php7" {
+		dockerfile += "php:7"
 	}
+	if base == "node7" {
+		dockerfile += "node:7"
+	}
+	dockerfile += "\nCOPY app /"
 
-	for _, container := range containers {
-		fmt.Fprintln(w, container.ID[:10], container.Image)
+	// Generate app
+	app := ""
+	if base == "php7" {
+		//app += "<?php\nparse_str($argv[1], $params);\n"
+		app += "<?php\n"
+	}
+	/*if base == "node7" {
+		app += "var querystring = require('querystring');\nvar params = querystring.parse(process.argv[2]);\n"
+	}*/
+	app += body + "\n"
+	if base == "php7" {
+		app += "?>"
 	}
 
 	// Buffer context
@@ -80,9 +97,8 @@ func create(w http.ResponseWriter, req *http.Request) {
 	var files = []struct {
 		Name, Body string
 	}{
-		{"Dockerfile", "FROM php:7\nRUN sleep 5"},
-		{"gopher.txt", "Gopher names:\nGeorge\nGeoffrey\nGonzo"},
-		{"todo.txt", "Get animal handling license."},
+		{"Dockerfile", dockerfile},
+		{"app", app},
 	}
 	for _, file := range files {
 		hdr := &tar.Header{
@@ -107,18 +123,25 @@ func create(w http.ResponseWriter, req *http.Request) {
 	reader := bytes.NewReader(buf.Bytes())
 	// Docker build
 	buildOptions := types.ImageBuildOptions{
-		Tags:           []string{"testtko"},
-    NoCache:        true,
+		Tags:           []string{tag},
+		NoCache:        true,
+		SuppressOutput: true,
 	}
 
 	response, err := dockercli.ImageBuild(context.Background(), reader, buildOptions)
-  defer response.Body.Close()
-  //fmt.Fprintf(dockercli.Out(), "%s", response.Body)
-  buf2 := new(bytes.Buffer)
-  buf2.ReadFrom(response.Body)
-  newStr := buf2.String()
-  fmt.Fprintln(w, "response:", newStr)
-  //fmt.Fprintln(w, "response:", response.Body)
-  //buildCtx := ioutil.NopCloser(reader)
+	if err != nil {
+		fmt.Fprintln(w, "Error in creating image", tag)
+	}
+	defer response.Body.Close()
+	//fmt.Fprintf(dockercli.Out(), "%s", response.Body)
+	buf2 := new(bytes.Buffer)
+	buf2.ReadFrom(response.Body)
+	newStr := buf2.String()
+	fmt.Fprintln(w, "Image ", tag, "created !\n")
+	fmt.Fprintln(w, "Dockerfile:\n", dockerfile, "\n")
+	fmt.Fprintln(w, "Code:\n", app, "\n")
+	fmt.Fprintln(w, "Log:\n", newStr, "\n")
+	//fmt.Fprintln(w, "response:", response.Body)
+	//buildCtx := ioutil.NopCloser(reader)
 	//dockercli.ImageBuild(context.Background(), buildCtx, buildOptions)
 }

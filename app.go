@@ -7,8 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gorilla/mux"
+	//"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -35,6 +38,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/whoami", whoami)
 	r.HandleFunc("/create/{base}/{name}", create)
+	r.HandleFunc("/exec/{base}/{name}", exec)
 	http.Handle("/", r)
 	fmt.Println("Starting up on port " + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -58,11 +62,57 @@ func whoami(w http.ResponseWriter, req *http.Request) {
 }
 
 func exec(w http.ResponseWriter, req *http.Request) {
-	/*vars := mux.Vars(req)
+	vars := mux.Vars(req)
 	base := vars["base"]
 	name := vars["name"]
-	tag := tagprefix + "-" + base + "-" + name*/
-	fmt.Fprintln(w, "Not implemented yet")
+	tag := tagprefix + "-" + base + "-" + name
+	//fmt.Fprintln(w, "Not implemented yet")
+
+	ctx := context.Background()
+
+	// Pull
+	/*_, err = dockercli.ImagePull(ctx, tag, types.ImagePullOptions{})
+	if err != nil {
+		panic(err)
+	}*/
+
+	// Create
+	resp, err := dockercli.ContainerCreate(ctx, &container.Config{
+		Image: tag,
+		//	AttachStdout: true,
+	}, nil, nil, "")
+	if err != nil {
+		panic(err)
+	}
+
+	// Run
+	if err := dockercli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		panic(err)
+	}
+
+	// Wait
+	if _, err = dockercli.ContainerWait(ctx, resp.ID); err != nil {
+		panic(err)
+	}
+
+	// Logs
+	responseBody, err := dockercli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+	if err != nil {
+		panic(err)
+	}
+	defer responseBody.Close()
+
+	// Print
+	/*buf := new(bytes.Buffer)
+	buf.ReadFrom(out)
+	result := buf.String()
+	fmt.Fprintln(w, result)*/
+
+	//io.Copy(w, []byte(out))
+	stdcopy.StdCopy(w, w, responseBody)
+
+	// Delete
+	_ = dockercli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
 }
 
 func create(w http.ResponseWriter, req *http.Request) {
@@ -81,6 +131,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 	if base == "node7" {
 		dockerfile += "node:7"
 	}
+	dockerfile += "\nCOPY shell2http /"
 	dockerfile += "\nCOPY app /"
 	if base == "php7" {
 		dockerfile += "\nENTRYPOINT [\"php\", \"app\"]"
@@ -126,6 +177,23 @@ func create(w http.ResponseWriter, req *http.Request) {
 		if _, err := tw.Write([]byte(file.Body)); err != nil {
 			log.Fatalln(err)
 		}
+	}
+
+	// Add shell2http
+	dat, err := ioutil.ReadFile("/shell2http")
+	if err != nil {
+		log.Fatal(err)
+	}
+	hdr := &tar.Header{
+		Name: "/shell2http",
+		Mode: 0700,
+		Size: int64(len(dat)),
+	}
+	if err := tw.WriteHeader(hdr); err != nil {
+		log.Fatalln(err)
+	}
+	if _, err := tw.Write(dat); err != nil {
+		log.Fatalln(err)
 	}
 
 	// Make sure to check the error on Close.

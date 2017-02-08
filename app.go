@@ -39,6 +39,7 @@ func main() {
 	r.HandleFunc("/whoami", whoami)
 	r.HandleFunc("/create/{base}/{name}", create)
 	r.HandleFunc("/exec/{base}/{name}", exec)
+	r.HandleFunc("/up/{base}/{name}", up)
 	http.Handle("/", r)
 	fmt.Println("Starting up on port " + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -61,14 +62,55 @@ func whoami(w http.ResponseWriter, req *http.Request) {
 	req.Write(w)
 }
 
+func up(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	base := vars["base"]
+	name := vars["name"]
+	tag := tagprefix + "-" + base + "-" + name
+	containername := tag
+	ctx := context.Background()
+
+	cmd := []string{}
+	if base == "php7" {
+		cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"php app\""}
+	}
+	if base == "node7" {
+		cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"node app\""}
+	}
+
+	// Create
+	resp, err := dockercli.ContainerCreate(ctx, &container.Config{
+		Image:      tag,
+		Entrypoint: cmd,
+	}, nil, nil, containername)
+	if err != nil {
+		panic(err)
+	}
+
+	// Run
+	if err := dockercli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		panic(err)
+	}
+
+	fmt.Fprintln(w, "Container id ", resp.ID, "started")
+
+}
+
 func exec(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	base := vars["base"]
 	name := vars["name"]
 	tag := tagprefix + "-" + base + "-" + name
-	//fmt.Fprintln(w, "Not implemented yet")
-
+	containername := tag
 	ctx := context.Background()
+
+	cmd := []string{}
+	if base == "php7" {
+		cmd = []string{"php", "app"}
+	}
+	if base == "node7" {
+		cmd = []string{"node", "app"}
+	}
 
 	// Pull
 	/*_, err = dockercli.ImagePull(ctx, tag, types.ImagePullOptions{})
@@ -76,11 +118,29 @@ func exec(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}*/
 
+	// Container running ?
+	/*respExec, err := dockercli.ContainerExecCreate(ctx, containername, types.ExecConfig{
+		Cmd: cmd,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	err = dockercli.ContainerExecStart(ctx, respExec.ID, types.ExecStartCheck{})
+	if err != nil {
+		panic(err)
+	}*/
+
+	// If yes, we http request shell2http of the container
+	// TODO
+
+	// If no, we serverless
+
 	// Create
 	resp, err := dockercli.ContainerCreate(ctx, &container.Config{
 		Image: tag,
 		//	AttachStdout: true,
-	}, nil, nil, "")
+	}, nil, nil, containername)
 	if err != nil {
 		panic(err)
 	}

@@ -14,7 +14,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"archive/tar"
 	"bytes"
-	"io"
 )
 
 var port string
@@ -81,7 +80,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 	var files = []struct {
 		Name, Body string
 	}{
-		{"Dockerfile", "FROM php:7"},
+		{"Dockerfile", "FROM php:7\nRUN sleep 5"},
 		{"gopher.txt", "Gopher names:\nGeorge\nGeoffrey\nGonzo"},
 		{"todo.txt", "Get animal handling license."},
 	}
@@ -105,26 +104,21 @@ func create(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Open the tar archive for reading.
-	buildCtx := bytes.NewReader(buf.Bytes())
-	tr := tar.NewReader(buildCtx)
-
-	// Iterate through the files in the archive.
-	for {
-		hdr, err := tr.Next()
-		if err == io.EOF {
-			// end of tar archive
-			break
-		}
-		if err != nil {
-			log.Fatalln(err)
-		}
-		fmt.Fprintln(w, "File:", hdr.Name)
-	}
-
+	reader := bytes.NewReader(buf.Bytes())
 	// Docker build
 	buildOptions := types.ImageBuildOptions{
 		Tags:           []string{"testtko"},
+    NoCache:        true,
 	}
-	//response, err := dockercli.ImageBuild(context.Background(), buildCtx, buildOptions)
-	dockercli.ImageBuild(context.Background(), buildCtx, buildOptions)
+
+	response, err := dockercli.ImageBuild(context.Background(), reader, buildOptions)
+  defer response.Body.Close()
+  //fmt.Fprintf(dockercli.Out(), "%s", response.Body)
+  buf2 := new(bytes.Buffer)
+  buf2.ReadFrom(response.Body)
+  newStr := buf2.String()
+  fmt.Fprintln(w, "response:", newStr)
+  //fmt.Fprintln(w, "response:", response.Body)
+  //buildCtx := ioutil.NopCloser(reader)
+	//dockercli.ImageBuild(context.Background(), buildCtx, buildOptions)
 }

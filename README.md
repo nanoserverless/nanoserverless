@@ -12,14 +12,14 @@ docker run -d \
 ```
 curl -X POST -H 'Content-Type: text/plain' \
   'http://localhost:1664/create/php7/showparams' \
-  -d 'var_dump($params);'
+  -d 'print(json_encode($_ENV));'
 ```
 
 ### Create node7 func
 ```
 curl -X POST -H 'Content-Type: text/plain' \
   'http://localhost:1664/create/node7/showparams' \
-  -d 'console.log(JSON.stringify(params));'
+  -d 'console.log(JSON.stringify(process.env));'
 ```
 
 ### Exec php7 func

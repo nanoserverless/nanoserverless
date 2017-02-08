@@ -5,7 +5,7 @@ services:
 
 script:
   - docker build -t nanoserverless/nanoserverless:$TRAVIS_BRANCH -f Dockerfile.build .
-  - id=$(docker create nanoserverless/nanoserverless)
+  - id=$(docker create nanoserverless/nanoserverless:$TRAVIS_BRANCH)
   - docker cp $id:/go/src/nanoserverless nanoserverless
   - docker rm -f $id
   - docker build -t nanoserverless/nanoserverless:$TRAVIS_BRANCH-light -f Dockerfile .

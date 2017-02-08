@@ -9,10 +9,14 @@ docker run -d \
   --name nanoserverless nanoserverless/nanoserverless
 ```
 
+## Up in swarm mode
+docker network create -d overlay nanoserverless
+
+
 ### Create php7 func
 ```
 curl -X POST \
-  'http://localhost:1664/php7/showparams/create' \
+  'http://<ip_docker>:1664/php7/showparams/create' \
   -d 'print(json_encode($_ENV));'
 ```
 Result :
@@ -36,7 +40,7 @@ Log:
 ### Create node7 func
 ```
 curl -X POST \
-  'http://localhost:1664/node7/showparams/create' \
+  'http://<ip_docker>:1664/node7/showparams/create' \
   -d 'console.log(JSON.stringify(process.env));'
 ```
 Result :
@@ -58,10 +62,10 @@ Log:
 
 ### Exec php7 func
 ```
-curl 'http://localhost:1664/php7/showparams/exec?p1=parm1&p2=parm2' | python -m json.tool
+curl 'http://<ip_docker>:1664/php7/showparams/exec?p1=parm1&p2=parm2' | python -m json.tool
 ```
 
 ### Exec node7 func
 ```
-curl 'http://localhost:1664/node7/showparams/exec?p1=parm1&p2=parm2' | python -m json.tool
+curl 'http://<ip_docker>:1664/node7/showparams/exec?p1=parm1&p2=parm2' | python -m json.tool
 ```

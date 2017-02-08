@@ -36,10 +36,11 @@ func main() {
 
 	// Router
 	r := mux.NewRouter()
+  r.HandleFunc("/{base}/{name}", infofunc)
+	r.HandleFunc("/{base}/{name}/create", create)
+	r.HandleFunc("/{base}/{name}/exec", exec)
+	r.HandleFunc("/{base}/{name}/up", up)
 	r.HandleFunc("/whoami", whoami)
-	r.HandleFunc("/create/{base}/{name}", create)
-	r.HandleFunc("/exec/{base}/{name}", exec)
-	r.HandleFunc("/up/{base}/{name}", up)
 	http.Handle("/", r)
 	fmt.Println("Starting up on port " + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
@@ -60,6 +61,14 @@ func whoami(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(w, "Hostname:", hostname)
 
 	req.Write(w)
+}
+
+func infofunc(w http.ResponseWriter, req *http.Request) {
+  vars := mux.Vars(req)
+  base := vars["base"]
+  name := vars["name"]
+  fmt.Fprintln(w, "You're trying to get info on the", base, name, "function")
+  fmt.Fprintln(w, "But it's not implement yet :D")
 }
 
 func up(w http.ResponseWriter, req *http.Request) {
@@ -272,10 +281,10 @@ func create(w http.ResponseWriter, req *http.Request) {
 
 	response, err := dockercli.ImageBuild(context.Background(), reader, buildOptions)
 	if err != nil {
-		fmt.Fprintln(w, "Error in creating image", tag)
+    log.Fatalln(err)
+		//fmt.Fprintln(w, "Error in creating image", tag)
 	}
 	defer response.Body.Close()
-	//fmt.Fprintf(dockercli.Out(), "%s", response.Body)
 	buf2 := new(bytes.Buffer)
 	buf2.ReadFrom(response.Body)
 	result := buf2.String()

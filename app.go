@@ -104,13 +104,13 @@ func exec(w http.ResponseWriter, req *http.Request) {
 	containername := tag
 	ctx := context.Background()
 
-	cmd := []string{}
+	/*cmd := []string{}
 	if base == "php7" {
 		cmd = []string{"php", "app"}
 	}
 	if base == "node7" {
 		cmd = []string{"node", "app"}
-	}
+	}*/
 
 	// Pull
 	/*_, err = dockercli.ImagePull(ctx, tag, types.ImagePullOptions{})

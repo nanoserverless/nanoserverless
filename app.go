@@ -57,6 +57,14 @@ func whoami(w http.ResponseWriter, req *http.Request) {
 	req.Write(w)
 }
 
+func exec(w http.ResponseWriter, req *http.Request) {
+	/*vars := mux.Vars(req)
+	base := vars["base"]
+	name := vars["name"]
+	tag := tagprefix + "-" + base + "-" + name*/
+	fmt.Fprintln(w, "Not implemented yet")
+}
+
 func create(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	base := vars["base"]
@@ -74,6 +82,12 @@ func create(w http.ResponseWriter, req *http.Request) {
 		dockerfile += "node:7"
 	}
 	dockerfile += "\nCOPY app /"
+	if base == "php7" {
+		dockerfile += "\nENTRYPOINT [\"php\", \"app\"]"
+	}
+	if base == "node7" {
+		dockerfile += "\nENTRYPOINT [\"node\", \"app\"]"
+	}
 
 	// Generate app
 	app := ""
@@ -136,11 +150,14 @@ func create(w http.ResponseWriter, req *http.Request) {
 	//fmt.Fprintf(dockercli.Out(), "%s", response.Body)
 	buf2 := new(bytes.Buffer)
 	buf2.ReadFrom(response.Body)
-	newStr := buf2.String()
+	result := buf2.String()
 	fmt.Fprintln(w, "Image ", tag, "created !\n")
-	fmt.Fprintln(w, "Dockerfile:\n", dockerfile, "\n")
-	fmt.Fprintln(w, "Code:\n", app, "\n")
-	fmt.Fprintln(w, "Log:\n", newStr, "\n")
+	fmt.Fprintln(w, "Dockerfile:")
+	fmt.Fprintln(w, dockerfile, "\n")
+	fmt.Fprintln(w, "Code:")
+	fmt.Fprintln(w, app, "\n")
+	fmt.Fprintln(w, "Log:")
+	fmt.Fprintln(w, result, "\n")
 	//fmt.Fprintln(w, "response:", response.Body)
 	//buildCtx := ioutil.NopCloser(reader)
 	//dockercli.ImageBuild(context.Background(), buildCtx, buildOptions)

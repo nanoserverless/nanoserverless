@@ -22,12 +22,23 @@ curl -X POST -H 'Content-Type: text/plain' \
   -d 'console.log(JSON.stringify(process.env));'
 ```
 
+### Exec php7 func new image
+```
+docker run --rm -e "key1=val1" -e "key2=val2" nanoserverless-php7-showparams | python -m json.tool
+```
+
+### Exec node7 func new image
+```
+docker run --rm -e "key1=val1" -e "key2=val2" nanoserverless-node7-showparams | python -m json.tool
+```
+
+## TODO
 ### Exec php7 func
 ```
-curl 'http://localhost:1664/exec/php7/showparams?p1=parm1&p2=parm2'
+curl 'http://localhost:1664/exec/php7/showparams?p1=parm1&p2=parm2' | python -m json.tool
 ```
 
 ### Exec node7 func
 ```
-curl 'http://localhost:1664/exec/node7/showparams?p1=parm1&p2=parm2'
+curl 'http://localhost:1664/exec/node7/showparams?p1=parm1&p2=parm2' | python -m json.tool
 ```

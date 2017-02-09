@@ -8,9 +8,10 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
-	"github.com/docker/docker/pkg/stdcopy"
+	//"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gorilla/mux"
 	//"io"
 	"io/ioutil"
@@ -24,9 +25,14 @@ import (
 var port string
 var dockercli, err = client.NewClient("unix:///var/run/docker.sock", "v1.25", nil, map[string]string{"User-Agent": "nanoserverless"})
 var tagprefix = "nanoserverless"
+var registry string
 
 func init() {
 	flag.StringVar(&port, "port", "80", "give me a port number")
+	registry = os.Getenv("REGISTRY_URL")
+	if registry != "" {
+		registry += "/"
+	}
 }
 
 func main() {
@@ -69,8 +75,30 @@ func infofunc(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	base := vars["base"]
 	name := vars["name"]
-	fmt.Fprintln(w, "You're trying to get info on the", base, name, "function")
-	fmt.Fprintln(w, "But it's not implement yet :D")
+	tag := tagprefix + "-" + base + "-" + name
+	servicename := tag
+	ctx := context.Background()
+
+	fmt.Fprintln(w, "Service", servicename, "status :")
+
+	// Get tasks
+	serviceNameFilter := filters.NewArgs()
+	serviceNameFilter.Add("name", servicename)
+	tasks, err := dockercli.TaskList(ctx, types.TaskListOptions{
+		Filters: serviceNameFilter,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, task := range tasks {
+		fmt.Fprintln(w, "Task", task.Slot, task.Status.ContainerStatus.ContainerID, task.Status.State, "("+task.Status.Message+")")
+	}
+	if len(tasks) == 0 {
+		fmt.Fprintln(w, "Not UP")
+	}
+
+	//fmt.Fprintln(w, "You're trying to get info on the", base, name, "function")
+	//fmt.Fprintln(w, "But it's not implement yet :D")
 }
 
 func down(w http.ResponseWriter, req *http.Request) {
@@ -117,7 +145,7 @@ func up(w http.ResponseWriter, req *http.Request) {
 		},
 		TaskTemplate: swarm.TaskSpec{
 			ContainerSpec: swarm.ContainerSpec{
-				Image: tag,
+				Image: registry + tag,
 				/*Args:     opts.args,
 				Env:      currentEnv,
 				Hostname: opts.hostname,
@@ -187,12 +215,31 @@ func exec(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		// Create
 		resp, err := dockercli.ContainerCreate(ctx, &container.Config{
-			Image:      tag,
+			Image:      registry + tag,
 			Entrypoint: []string{"/run"},
 			//      AttachStdout: true,
 		}, nil, nil, containername)
 		if err != nil {
-			panic(err)
+			// Trying to pull image
+			resp_pull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
+				RegistryAuth: "ewogICJ1c2VybmFtZSI6ICIiLAogICJwYXNzd29yZCI6ICIiLAogICJlbWFpbCI6ICIiLAogICJzZXJ2ZXJhZGRyZXNzIjogIiIKfQo=",
+			})
+			// Wait pull finish
+			buf_pull := new(bytes.Buffer)
+			buf_pull.ReadFrom(resp_pull)
+			buf_pull.String()
+
+			if err != nil {
+				panic(err)
+			}
+
+			resp, err = dockercli.ContainerCreate(ctx, &container.Config{
+				Image:      registry + tag,
+				Entrypoint: []string{"/run"},
+			}, nil, nil, containername)
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		// Run
@@ -206,7 +253,7 @@ func exec(w http.ResponseWriter, req *http.Request) {
 		}
 
 		// Logs
-		responseBody, err := dockercli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+		responseBody, err := dockercli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
 		if err != nil {
 			panic(err)
 		}
@@ -219,12 +266,17 @@ func exec(w http.ResponseWriter, req *http.Request) {
 		  fmt.Fprintln(w, result)*/
 
 		//io.Copy(w, []byte(out))
-		stdcopy.StdCopy(w, w, responseBody)
+		fmt.Fprintln(w, "Result:")
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(responseBody)
+		newStr := buf.String()
+
+		//stdcopy.StdCopy(w, w, responseBody)
+		fmt.Fprintln(w, newStr)
 
 		// Delete
 		_ = dockercli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
 
-		panic(err)
 	} else {
 		defer resp_http.Body.Close()
 		buf := new(bytes.Buffer)
@@ -277,10 +329,10 @@ func create(w http.ResponseWriter, req *http.Request) {
 	// Generate run
 	run := ""
 	if base == "php7" {
-		run += "php app"
+		run += "#!/bin/sh\nphp app"
 	}
 	if base == "node7" {
-		run += "node app"
+		run += "#!/bin/sh\nnode app"
 	}
 
 	// Buffer context
@@ -335,7 +387,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 	reader := bytes.NewReader(buf.Bytes())
 	// Docker build
 	buildOptions := types.ImageBuildOptions{
-		Tags:           []string{tag},
+		Tags:           []string{registry + tag},
 		NoCache:        true,
 		SuppressOutput: true,
 	}
@@ -349,7 +401,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 	buf2 := new(bytes.Buffer)
 	buf2.ReadFrom(response.Body)
 	result := buf2.String()
-	fmt.Fprintln(w, "Image ", tag, "created !\n")
+	fmt.Fprintln(w, "Image ", registry+tag, "created !\n")
 	fmt.Fprintln(w, "Dockerfile:")
 	fmt.Fprintln(w, dockerfile, "\n")
 	fmt.Fprintln(w, "Code:")
@@ -359,4 +411,19 @@ func create(w http.ResponseWriter, req *http.Request) {
 	//fmt.Fprintln(w, "response:", response.Body)
 	//buildCtx := ioutil.NopCloser(reader)
 	//dockercli.ImageBuild(context.Background(), buildCtx, buildOptions)
+
+	// Push image if registry
+	if registry != "" {
+		response_push, err := dockercli.ImagePush(context.Background(), registry+tag, types.ImagePushOptions{
+			RegistryAuth: "ewogICJ1c2VybmFtZSI6ICIiLAogICJwYXNzd29yZCI6ICIiLAogICJlbWFpbCI6ICIiLAogICJzZXJ2ZXJhZGRyZXNzIjogIiIKfQo=",
+		})
+		if err != nil {
+			log.Fatalln(err)
+		}
+		buf3 := new(bytes.Buffer)
+		buf3.ReadFrom(response_push)
+		result_push := buf3.String()
+		fmt.Fprintln(w, "Push:")
+		fmt.Fprintln(w, result_push, "\n")
+	}
 }

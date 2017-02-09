@@ -36,7 +36,7 @@ func main() {
 
 	// Router
 	r := mux.NewRouter()
-  r.HandleFunc("/{base}/{name}", infofunc)
+	r.HandleFunc("/{base}/{name}", infofunc)
 	r.HandleFunc("/{base}/{name}/create", create)
 	r.HandleFunc("/{base}/{name}/exec", exec)
 	r.HandleFunc("/{base}/{name}/up", up)
@@ -64,94 +64,94 @@ func whoami(w http.ResponseWriter, req *http.Request) {
 }
 
 func infofunc(w http.ResponseWriter, req *http.Request) {
-  vars := mux.Vars(req)
-  base := vars["base"]
-  name := vars["name"]
-  fmt.Fprintln(w, "You're trying to get info on the", base, name, "function")
-  fmt.Fprintln(w, "But it's not implement yet :D")
+	vars := mux.Vars(req)
+	base := vars["base"]
+	name := vars["name"]
+	fmt.Fprintln(w, "You're trying to get info on the", base, name, "function")
+	fmt.Fprintln(w, "But it's not implement yet :D")
 }
 
 func up(w http.ResponseWriter, req *http.Request) {
-  /*vars := mux.Vars(req)
-  base := vars["base"]
-  name := vars["name"]
-  tag := tagprefix + "-" + base + "-" + name
-  servicename := tag
-  ctx := context.Background()
+	/*vars := mux.Vars(req)
+	  base := vars["base"]
+	  name := vars["name"]
+	  tag := tagprefix + "-" + base + "-" + name
+	  servicename := tag
+	  ctx := context.Background()
 
-  cmd := []string{}
-  if base == "php7" {
-    cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"php app\""}
-  }
-  if base == "node7" {
-    cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"node app\""}
-  }
+	  cmd := []string{}
+	  if base == "php7" {
+	    cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"php app\""}
+	  }
+	  if base == "node7" {
+	    cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"node app\""}
+	  }
 
-	// Create
-  service := swarm.ServiceSpec{
-    Annotations: swarm.Annotations{
-      Name:   servicename,
-      //Labels: runconfigopts.ConvertKVStringsToMap(opts.labels.GetAll()),
-    },
-    TaskTemplate: swarm.TaskSpec{
-      ContainerSpec: swarm.ContainerSpec{
-        Image:    tag,
-        Args:     opts.args,
-        Env:      currentEnv,
-        Hostname: opts.hostname,
-        Labels:   runconfigopts.ConvertKVStringsToMap(opts.containerLabels.GetAll()),
-        Dir:      opts.workdir,
-        User:     opts.user,
-        Groups:   opts.groups.GetAll(),
-        TTY:      opts.tty,
-        ReadOnly: opts.readOnly,
-        Mounts:   opts.mounts.Value(),
-        DNSConfig: &swarm.DNSConfig{
-          Nameservers: opts.dns.GetAll(),
-          Search:      opts.dnsSearch.GetAll(),
-          Options:     opts.dnsOption.GetAll(),
-        },
-        Hosts:           convertExtraHostsToSwarmHosts(opts.hosts.GetAll()),
-        StopGracePeriod: opts.stopGrace.Value(),
-        Secrets:         nil,
-        Healthcheck:     healthConfig,
-      },
-      Networks:      convertNetworks(opts.networks.GetAll()),
-      Resources:     opts.resources.ToResourceRequirements(),
-      RestartPolicy: opts.restartPolicy.ToRestartPolicy(),
-      Placement: &swarm.Placement{
-        Constraints: opts.constraints.GetAll(),
-      },
-      LogDriver: opts.logDriver.toLogDriver(),
-    },
-    Networks: convertNetworks(opts.networks.GetAll()),
-    Mode:     serviceMode,
-    UpdateConfig: &swarm.UpdateConfig{
-      Parallelism:     opts.update.parallelism,
-      Delay:           opts.update.delay,
-      Monitor:         opts.update.monitor,
-      FailureAction:   opts.update.onFailure,
-      MaxFailureRatio: opts.update.maxFailureRatio.Value(),
-    },
-    EndpointSpec: opts.endpoint.ToEndpointSpec(),
-  }
+		// Create
+	  service := swarm.ServiceSpec{
+	    Annotations: swarm.Annotations{
+	      Name:   servicename,
+	      //Labels: runconfigopts.ConvertKVStringsToMap(opts.labels.GetAll()),
+	    },
+	    TaskTemplate: swarm.TaskSpec{
+	      ContainerSpec: swarm.ContainerSpec{
+	        Image:    tag,
+	        Args:     opts.args,
+	        Env:      currentEnv,
+	        Hostname: opts.hostname,
+	        Labels:   runconfigopts.ConvertKVStringsToMap(opts.containerLabels.GetAll()),
+	        Dir:      opts.workdir,
+	        User:     opts.user,
+	        Groups:   opts.groups.GetAll(),
+	        TTY:      opts.tty,
+	        ReadOnly: opts.readOnly,
+	        Mounts:   opts.mounts.Value(),
+	        DNSConfig: &swarm.DNSConfig{
+	          Nameservers: opts.dns.GetAll(),
+	          Search:      opts.dnsSearch.GetAll(),
+	          Options:     opts.dnsOption.GetAll(),
+	        },
+	        Hosts:           convertExtraHostsToSwarmHosts(opts.hosts.GetAll()),
+	        StopGracePeriod: opts.stopGrace.Value(),
+	        Secrets:         nil,
+	        Healthcheck:     healthConfig,
+	      },
+	      Networks:      convertNetworks(opts.networks.GetAll()),
+	      Resources:     opts.resources.ToResourceRequirements(),
+	      RestartPolicy: opts.restartPolicy.ToRestartPolicy(),
+	      Placement: &swarm.Placement{
+	        Constraints: opts.constraints.GetAll(),
+	      },
+	      LogDriver: opts.logDriver.toLogDriver(),
+	    },
+	    Networks: convertNetworks(opts.networks.GetAll()),
+	    Mode:     serviceMode,
+	    UpdateConfig: &swarm.UpdateConfig{
+	      Parallelism:     opts.update.parallelism,
+	      Delay:           opts.update.delay,
+	      Monitor:         opts.update.monitor,
+	      FailureAction:   opts.update.onFailure,
+	      MaxFailureRatio: opts.update.maxFailureRatio.Value(),
+	    },
+	    EndpointSpec: opts.endpoint.ToEndpointSpec(),
+	  }
 
 
-	resp, err := dockercli.ServiceCreate(ctx, &swarm.ServiceSpec{
-		Image:      tag,
-		Entrypoint: cmd,
-	}, types.ServiceCreateOptions{})
-	if err != nil {
-		panic(err)
-	}
+		resp, err := dockercli.ServiceCreate(ctx, &swarm.ServiceSpec{
+			Image:      tag,
+			Entrypoint: cmd,
+		}, types.ServiceCreateOptions{})
+		if err != nil {
+			panic(err)
+		}
 
-	// Run
-	if err := dockercli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		panic(err)
-	}
+		// Run
+		if err := dockercli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+			panic(err)
+		}
 
-	fmt.Fprintln(w, "Container id ", resp.ID, "started")
-*/
+		fmt.Fprintln(w, "Container id ", resp.ID, "started")
+	*/
 }
 
 func exec(w http.ResponseWriter, req *http.Request) {
@@ -162,15 +162,6 @@ func exec(w http.ResponseWriter, req *http.Request) {
 	containername := tag
 	ctx := context.Background()
 
-  cmd := []string{}
-  if base == "php7" {
-    cmd = []string{"php", "app"}
-  }
-  if base == "node7" {
-    cmd = []string{"node", "app"}
-  }
-
-
 	/*cmd := []string{}
 	if base == "php7" {
 		cmd = []string{"php", "app"}
@@ -179,68 +170,56 @@ func exec(w http.ResponseWriter, req *http.Request) {
 		cmd = []string{"node", "app"}
 	}*/
 
-	// Pull
-	/*_, err = dockercli.ImagePull(ctx, tag, types.ImagePullOptions{})
+	// Test if we can http to the container
+	resp_http, err := http.Get("http://" + containername)
 	if err != nil {
-		panic(err)
-	}*/
+		// Create
+		resp, err := dockercli.ContainerCreate(ctx, &container.Config{
+			Image:      tag,
+			Entrypoint: []string{"/run"},
+			//      AttachStdout: true,
+		}, nil, nil, containername)
+		if err != nil {
+			panic(err)
+		}
 
-	// Container running ?
-	/*respExec, err := dockercli.ContainerExecCreate(ctx, containername, types.ExecConfig{
-		Cmd: cmd,
-	})
-	if err != nil {
+		// Run
+		if err := dockercli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+			panic(err)
+		}
+
+		// Wait
+		if _, err = dockercli.ContainerWait(ctx, resp.ID); err != nil {
+			panic(err)
+		}
+
+		// Logs
+		responseBody, err := dockercli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+		if err != nil {
+			panic(err)
+		}
+		defer responseBody.Close()
+
+		// Print
+		/*buf := new(bytes.Buffer)
+		  buf.ReadFrom(out)
+		  result := buf.String()
+		  fmt.Fprintln(w, result)*/
+
+		//io.Copy(w, []byte(out))
+		stdcopy.StdCopy(w, w, responseBody)
+
+		// Delete
+		_ = dockercli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
+
 		panic(err)
+	} else {
+		defer resp_http.Body.Close()
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp_http.Body)
+		fmt.Fprint(w, buf.String())
 	}
 
-	err = dockercli.ContainerExecStart(ctx, respExec.ID, types.ExecStartCheck{})
-	if err != nil {
-		panic(err)
-	}*/
-
-	// If yes, we http request shell2http of the container
-	// TODO
-
-	// If no, we serverless
-
-	// Create
-	resp, err := dockercli.ContainerCreate(ctx, &container.Config{
-		Image: tag,
-    Entrypoint: cmd,
-		//	AttachStdout: true,
-	}, nil, nil, containername)
-	if err != nil {
-		panic(err)
-	}
-
-	// Run
-	if err := dockercli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		panic(err)
-	}
-
-	// Wait
-	if _, err = dockercli.ContainerWait(ctx, resp.ID); err != nil {
-		panic(err)
-	}
-
-	// Logs
-	responseBody, err := dockercli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
-	if err != nil {
-		panic(err)
-	}
-	defer responseBody.Close()
-
-	// Print
-	/*buf := new(bytes.Buffer)
-	buf.ReadFrom(out)
-	result := buf.String()
-	fmt.Fprintln(w, result)*/
-
-	//io.Copy(w, []byte(out))
-	stdcopy.StdCopy(w, w, responseBody)
-
-	// Delete
-	_ = dockercli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
 }
 
 func create(w http.ResponseWriter, req *http.Request) {
@@ -261,11 +240,12 @@ func create(w http.ResponseWriter, req *http.Request) {
 	}
 	dockerfile += "\nCOPY shell2http /"
 	dockerfile += "\nCOPY app /"
+	dockerfile += "\nCOPY run /"
 	if base == "php7" {
-		dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-cgi\", \"-export-all-vars\", \"/\", \"\\\"php app\\\"\"]"
+		dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-port=80\", \"-cgi\", \"-export-all-vars\", \"/\", \"/run\"]"
 	}
 	if base == "node7" {
-		dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-cgi\", \"-export-all-vars\", \"/\", \"\\\"node app\\\"\"]"
+		dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-port=80\", \"-cgi\", \"-export-all-vars\", \"/\", \"/run\"]"
 	}
 
 	// Generate app
@@ -282,6 +262,15 @@ func create(w http.ResponseWriter, req *http.Request) {
 		app += "?>"
 	}
 
+	// Generate run
+	run := ""
+	if base == "php7" {
+		run += "php app"
+	}
+	if base == "node7" {
+		run += "node app"
+	}
+
 	// Buffer context
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
@@ -292,11 +281,12 @@ func create(w http.ResponseWriter, req *http.Request) {
 	}{
 		{"Dockerfile", dockerfile},
 		{"app", app},
+		{"run", run},
 	}
 	for _, file := range files {
 		hdr := &tar.Header{
 			Name: file.Name,
-			Mode: 0600,
+			Mode: 0700,
 			Size: int64(len(file.Body)),
 		}
 		if err := tw.WriteHeader(hdr); err != nil {
@@ -340,7 +330,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 
 	response, err := dockercli.ImageBuild(context.Background(), reader, buildOptions)
 	if err != nil {
-    log.Fatalln(err)
+		log.Fatalln(err)
 		//fmt.Fprintln(w, "Error in creating image", tag)
 	}
 	defer response.Body.Close()

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gorilla/mux"
@@ -40,6 +41,7 @@ func main() {
 	r.HandleFunc("/{base}/{name}/create", create)
 	r.HandleFunc("/{base}/{name}/exec", exec)
 	r.HandleFunc("/{base}/{name}/up", up)
+	r.HandleFunc("/{base}/{name}/down", down)
 	r.HandleFunc("/whoami", whoami)
 	http.Handle("/", r)
 	fmt.Println("Starting up on port " + port)
@@ -71,87 +73,97 @@ func infofunc(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(w, "But it's not implement yet :D")
 }
 
+func down(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	base := vars["base"]
+	name := vars["name"]
+	tag := tagprefix + "-" + base + "-" + name
+	servicename := tag
+	ctx := context.Background()
+
+	err := dockercli.ServiceRemove(ctx, servicename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Fprintln(w, "Service", servicename, "removed")
+
+}
+
 func up(w http.ResponseWriter, req *http.Request) {
-	/*vars := mux.Vars(req)
-	  base := vars["base"]
-	  name := vars["name"]
-	  tag := tagprefix + "-" + base + "-" + name
-	  servicename := tag
-	  ctx := context.Background()
+	vars := mux.Vars(req)
+	base := vars["base"]
+	name := vars["name"]
+	tag := tagprefix + "-" + base + "-" + name
+	servicename := tag
+	ctx := context.Background()
 
-	  cmd := []string{}
-	  if base == "php7" {
-	    cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"php app\""}
-	  }
-	  if base == "node7" {
-	    cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"node app\""}
-	  }
-
-		// Create
-	  service := swarm.ServiceSpec{
-	    Annotations: swarm.Annotations{
-	      Name:   servicename,
-	      //Labels: runconfigopts.ConvertKVStringsToMap(opts.labels.GetAll()),
-	    },
-	    TaskTemplate: swarm.TaskSpec{
-	      ContainerSpec: swarm.ContainerSpec{
-	        Image:    tag,
-	        Args:     opts.args,
-	        Env:      currentEnv,
-	        Hostname: opts.hostname,
-	        Labels:   runconfigopts.ConvertKVStringsToMap(opts.containerLabels.GetAll()),
-	        Dir:      opts.workdir,
-	        User:     opts.user,
-	        Groups:   opts.groups.GetAll(),
-	        TTY:      opts.tty,
-	        ReadOnly: opts.readOnly,
-	        Mounts:   opts.mounts.Value(),
-	        DNSConfig: &swarm.DNSConfig{
-	          Nameservers: opts.dns.GetAll(),
-	          Search:      opts.dnsSearch.GetAll(),
-	          Options:     opts.dnsOption.GetAll(),
-	        },
-	        Hosts:           convertExtraHostsToSwarmHosts(opts.hosts.GetAll()),
-	        StopGracePeriod: opts.stopGrace.Value(),
-	        Secrets:         nil,
-	        Healthcheck:     healthConfig,
-	      },
-	      Networks:      convertNetworks(opts.networks.GetAll()),
-	      Resources:     opts.resources.ToResourceRequirements(),
-	      RestartPolicy: opts.restartPolicy.ToRestartPolicy(),
-	      Placement: &swarm.Placement{
-	        Constraints: opts.constraints.GetAll(),
-	      },
-	      LogDriver: opts.logDriver.toLogDriver(),
-	    },
-	    Networks: convertNetworks(opts.networks.GetAll()),
-	    Mode:     serviceMode,
-	    UpdateConfig: &swarm.UpdateConfig{
-	      Parallelism:     opts.update.parallelism,
-	      Delay:           opts.update.delay,
-	      Monitor:         opts.update.monitor,
-	      FailureAction:   opts.update.onFailure,
-	      MaxFailureRatio: opts.update.maxFailureRatio.Value(),
-	    },
-	    EndpointSpec: opts.endpoint.ToEndpointSpec(),
-	  }
-
-
-		resp, err := dockercli.ServiceCreate(ctx, &swarm.ServiceSpec{
-			Image:      tag,
-			Entrypoint: cmd,
-		}, types.ServiceCreateOptions{})
-		if err != nil {
-			panic(err)
-		}
-
-		// Run
-		if err := dockercli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
-			panic(err)
-		}
-
-		fmt.Fprintln(w, "Container id ", resp.ID, "started")
+	/* Goal :
+	docker service create \
+	  --name nanoserverless-node7-pi \
+	  --network nanoserverless \
+	  nanoserverless-node7-pi
 	*/
+
+	// Network
+	network := swarm.NetworkAttachmentConfig{
+		Target: "nanoserverless",
+	}
+
+	// Create
+	service := swarm.ServiceSpec{
+		Annotations: swarm.Annotations{
+			Name: servicename,
+			//Labels: runconfigopts.ConvertKVStringsToMap(opts.labels.GetAll()),
+		},
+		TaskTemplate: swarm.TaskSpec{
+			ContainerSpec: swarm.ContainerSpec{
+				Image: tag,
+				/*Args:     opts.args,
+				Env:      currentEnv,
+				Hostname: opts.hostname,
+				Labels:   runconfigopts.ConvertKVStringsToMap(opts.containerLabels.GetAll()),
+				Dir:      opts.workdir,
+				User:     opts.user,
+				Groups:   opts.groups.GetAll(),
+				TTY:      opts.tty,
+				ReadOnly: opts.readOnly,
+				Mounts:   opts.mounts.Value(),
+				DNSConfig: &swarm.DNSConfig{
+					Nameservers: opts.dns.GetAll(),
+					Search:      opts.dnsSearch.GetAll(),
+					Options:     opts.dnsOption.GetAll(),
+				},
+				Hosts:           convertExtraHostsToSwarmHosts(opts.hosts.GetAll()),
+				StopGracePeriod: opts.stopGrace.Value(),
+				Secrets:         nil,
+				Healthcheck:     healthConfig,*/
+			},
+			Networks: []swarm.NetworkAttachmentConfig{network},
+			/*Resources:     opts.resources.ToResourceRequirements(),
+			RestartPolicy: opts.restartPolicy.ToRestartPolicy(),
+			Placement: &swarm.Placement{
+				Constraints: opts.constraints.GetAll(),
+			},
+			LogDriver: opts.logDriver.toLogDriver(),*/
+		},
+		//Networks: convertNetworks(opts.networks.GetAll()),
+		/*Mode:     serviceMode,
+		UpdateConfig: &swarm.UpdateConfig{
+			Parallelism:     opts.update.parallelism,
+			Delay:           opts.update.delay,
+			Monitor:         opts.update.monitor,
+			FailureAction:   opts.update.onFailure,
+			MaxFailureRatio: opts.update.maxFailureRatio.Value(),
+		},
+		EndpointSpec: opts.endpoint.ToEndpointSpec(),*/
+	}
+
+	resp, err := dockercli.ServiceCreate(ctx, service, types.ServiceCreateOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Fprintln(w, "Service id ", resp.ID, "created")
 }
 
 func exec(w http.ResponseWriter, req *http.Request) {

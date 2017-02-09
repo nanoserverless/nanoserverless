@@ -1,5 +1,6 @@
 # nanoserverless
-Docker Hub : https://hub.docker.com/r/nanoserverless/nanoserverless/
+Docker Hub : https://hub.docker.com/r/nanoserverless/nanoserverless/  
+[![Build Status](https://travis-ci.org/nanoserverless/nanoserverless.svg?branch=master)](https://travis-ci.org/nanoserverless/nanoserverless)
 
 ## Up in seconds
 ```

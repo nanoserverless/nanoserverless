@@ -6,12 +6,17 @@ Docker Hub : https://hub.docker.com/r/nanoserverless/nanoserverless/
 docker run -d \
   -p 1664:3000 \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  --name nanoserverless nanoserverless/nanoserverless
+  --name nanoserverless nanoserverless/nanoserverless:master-light
 ```
 
 ## Up in swarm mode
 docker network create -d overlay nanoserverless
-
+docker service create \
+  --name nanoserverless \
+  --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
+  --network nanoserverless \
+  --publish 1664:80 \
+  nanoserverless/nanoserverless:master-light
 
 ### Create php7 func
 ```

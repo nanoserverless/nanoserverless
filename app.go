@@ -72,26 +72,75 @@ func infofunc(w http.ResponseWriter, req *http.Request) {
 }
 
 func up(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	base := vars["base"]
-	name := vars["name"]
-	tag := tagprefix + "-" + base + "-" + name
-	containername := tag
-	ctx := context.Background()
+  /*vars := mux.Vars(req)
+  base := vars["base"]
+  name := vars["name"]
+  tag := tagprefix + "-" + base + "-" + name
+  servicename := tag
+  ctx := context.Background()
 
-	cmd := []string{}
-	if base == "php7" {
-		cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"php app\""}
-	}
-	if base == "node7" {
-		cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"node app\""}
-	}
+  cmd := []string{}
+  if base == "php7" {
+    cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"php app\""}
+  }
+  if base == "node7" {
+    cmd = []string{"/shell2http", "-cgi", "-export-all-vars", "/", "\"node app\""}
+  }
 
 	// Create
-	resp, err := dockercli.ContainerCreate(ctx, &container.Config{
+  service := swarm.ServiceSpec{
+    Annotations: swarm.Annotations{
+      Name:   servicename,
+      //Labels: runconfigopts.ConvertKVStringsToMap(opts.labels.GetAll()),
+    },
+    TaskTemplate: swarm.TaskSpec{
+      ContainerSpec: swarm.ContainerSpec{
+        Image:    tag,
+        Args:     opts.args,
+        Env:      currentEnv,
+        Hostname: opts.hostname,
+        Labels:   runconfigopts.ConvertKVStringsToMap(opts.containerLabels.GetAll()),
+        Dir:      opts.workdir,
+        User:     opts.user,
+        Groups:   opts.groups.GetAll(),
+        TTY:      opts.tty,
+        ReadOnly: opts.readOnly,
+        Mounts:   opts.mounts.Value(),
+        DNSConfig: &swarm.DNSConfig{
+          Nameservers: opts.dns.GetAll(),
+          Search:      opts.dnsSearch.GetAll(),
+          Options:     opts.dnsOption.GetAll(),
+        },
+        Hosts:           convertExtraHostsToSwarmHosts(opts.hosts.GetAll()),
+        StopGracePeriod: opts.stopGrace.Value(),
+        Secrets:         nil,
+        Healthcheck:     healthConfig,
+      },
+      Networks:      convertNetworks(opts.networks.GetAll()),
+      Resources:     opts.resources.ToResourceRequirements(),
+      RestartPolicy: opts.restartPolicy.ToRestartPolicy(),
+      Placement: &swarm.Placement{
+        Constraints: opts.constraints.GetAll(),
+      },
+      LogDriver: opts.logDriver.toLogDriver(),
+    },
+    Networks: convertNetworks(opts.networks.GetAll()),
+    Mode:     serviceMode,
+    UpdateConfig: &swarm.UpdateConfig{
+      Parallelism:     opts.update.parallelism,
+      Delay:           opts.update.delay,
+      Monitor:         opts.update.monitor,
+      FailureAction:   opts.update.onFailure,
+      MaxFailureRatio: opts.update.maxFailureRatio.Value(),
+    },
+    EndpointSpec: opts.endpoint.ToEndpointSpec(),
+  }
+
+
+	resp, err := dockercli.ServiceCreate(ctx, &swarm.ServiceSpec{
 		Image:      tag,
 		Entrypoint: cmd,
-	}, nil, nil, containername)
+	}, types.ServiceCreateOptions{})
 	if err != nil {
 		panic(err)
 	}
@@ -102,7 +151,7 @@ func up(w http.ResponseWriter, req *http.Request) {
 	}
 
 	fmt.Fprintln(w, "Container id ", resp.ID, "started")
-
+*/
 }
 
 func exec(w http.ResponseWriter, req *http.Request) {
@@ -112,6 +161,15 @@ func exec(w http.ResponseWriter, req *http.Request) {
 	tag := tagprefix + "-" + base + "-" + name
 	containername := tag
 	ctx := context.Background()
+
+  cmd := []string{}
+  if base == "php7" {
+    cmd = []string{"php", "app"}
+  }
+  if base == "node7" {
+    cmd = []string{"node", "app"}
+  }
+
 
 	/*cmd := []string{}
 	if base == "php7" {
@@ -148,6 +206,7 @@ func exec(w http.ResponseWriter, req *http.Request) {
 	// Create
 	resp, err := dockercli.ContainerCreate(ctx, &container.Config{
 		Image: tag,
+    Entrypoint: cmd,
 		//	AttachStdout: true,
 	}, nil, nil, containername)
 	if err != nil {
@@ -203,10 +262,10 @@ func create(w http.ResponseWriter, req *http.Request) {
 	dockerfile += "\nCOPY shell2http /"
 	dockerfile += "\nCOPY app /"
 	if base == "php7" {
-		dockerfile += "\nENTRYPOINT [\"php\", \"app\"]"
+		dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-cgi\", \"-export-all-vars\", \"/\", \"\\\"php app\\\"\"]"
 	}
 	if base == "node7" {
-		dockerfile += "\nENTRYPOINT [\"node\", \"app\"]"
+		dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-cgi\", \"-export-all-vars\", \"/\", \"\\\"node app\\\"\"]"
 	}
 
 	// Generate app

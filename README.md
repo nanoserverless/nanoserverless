@@ -10,6 +10,7 @@ docker run -d \
 ```
 
 ## Up in swarm mode
+```
 docker network create -d overlay nanoserverless
 docker service create \
   --name nanoserverless \
@@ -17,6 +18,7 @@ docker service create \
   --network nanoserverless \
   --publish 1664:80 \
   nanoserverless/nanoserverless:master-light
+```
 
 ### Create php7 func
 ```

@@ -1,5 +1,5 @@
 # nanoserverless
-Docker Hub : https://hub.docker.com/r/nanoserverless/nanoserverless/  
+<a href="https://hub.docker.com/r/nanoserverless/nanoserverless"><img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_(container_engine)_logo.png" height="20"/></a>  
 [![Build Status](https://travis-ci.org/nanoserverless/nanoserverless.svg?branch=master)](https://travis-ci.org/nanoserverless/nanoserverless)
 
 ## Up in seconds

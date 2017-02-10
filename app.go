@@ -52,6 +52,7 @@ func init() {
     "public class app {\npublic static void main(String[] args) {",
     "}\n}",
   }
+  bases["go17"] = base{"", "golang:1.7", "WORKDIR /go/src\nENV CGO_ENABLED=0\nENV GO_PATH=/go/src\nRUN mv /app ./app.go && go build -a --installsuffix cgo --ldflags=-s -o /run", "package main\nimport \"fmt\"\nfunc init() {}\nfunc main() {", "}"}
 }
 
 func main() {

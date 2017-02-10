@@ -2,7 +2,15 @@
 <a href="https://hub.docker.com/r/nanoserverless/nanoserverless" target="blank"><img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_(container_engine)_logo.png" height="20"/></a>  
 <a href="https://travis-ci.org/nanoserverless/nanoserverless" target="blank"><img src="https://travis-ci.org/nanoserverless/nanoserverless.svg?branch=master" height="20"/></a>  
 
-## Up service
+## Example
+You can test that on http://play-with-docker.com
+
+### Swarm init if needed
+```
+docker swarm init
+```
+
+### Up service
 ```
 docker network create -d overlay nanoserverless
 docker service create \
@@ -13,7 +21,6 @@ docker service create \
   nanoserverless/nanoserverless:master-light
 ```
 
-## Example
 ### Create pi function in node7 (time to build FROM node:7 image)
 ```
 time curl 'http://<ip_manager>:<port>/node7/pi/create?url=https://raw.githubusercontent.com/nanoserverless/nanoserverless/master/examples/pi/pi.js'

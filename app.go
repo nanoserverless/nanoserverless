@@ -646,9 +646,9 @@ func create(w http.ResponseWriter, req *http.Request) {
 		PushLog:    resultPush,
 	}
 
-	json_result, err := json.Marshal(fullResponse)
+	jsonResult, err := json.Marshal(fullResponse)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fmt.Fprintln(w, string(json_result))
+	fmt.Fprintln(w, string(jsonResult))
 }

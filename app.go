@@ -131,13 +131,13 @@ func whoami(w http.ResponseWriter, req *http.Request) {
 
 func synchroRepo() {
 	ctx := context.Background()
-	resp_http, err := http.Get("http://" + registry + "v2/_catalog")
+	respHttp, err := http.Get("http://" + registry + "v2/_catalog")
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer resp_http.Body.Close()
+	defer respHttp.Body.Close()
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp_http.Body)
+	buf.ReadFrom(respHttp.Body)
 	//fmt.Fprint(w, buf.String())
 	type Repos struct {
 		Repositories []string `json:"repositories"`
@@ -152,13 +152,13 @@ func synchroRepo() {
 		if strings.HasPrefix(tag, tagprefix+"-") {
 			fmt.Println("Pulling image :", registry+tag)
 			// Trying to pull image
-			resp_pull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
+			respPull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
 				RegistryAuth: "ewogICJ1c2VybmFtZSI6ICIiLAogICJwYXNzd29yZCI6ICIiLAogICJlbWFpbCI6ICIiLAogICJzZXJ2ZXJhZGRyZXNzIjogIiIKfQo=",
 			})
 			// Wait pull finish
-			buf_pull := new(bytes.Buffer)
-			buf_pull.ReadFrom(resp_pull)
-			buf_pull.String()
+			bufPull := new(bytes.Buffer)
+			bufPull.ReadFrom(respPull)
+			//bufPull.String()
 			if err != nil {
 				panic(err)
 			}
@@ -333,13 +333,13 @@ func code(w http.ResponseWriter, req *http.Request) {
 	}, nil, nil, "")
 	if err != nil {
 		// Trying to pull image
-		resp_pull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
+		respPull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
 			RegistryAuth: "ewogICJ1c2VybmFtZSI6ICIiLAogICJwYXNzd29yZCI6ICIiLAogICJlbWFpbCI6ICIiLAogICJzZXJ2ZXJhZGRyZXNzIjogIiIKfQo=",
 		})
 		// Wait pull finish
-		buf_pull := new(bytes.Buffer)
-		buf_pull.ReadFrom(resp_pull)
-		buf_pull.String()
+		bufPull := new(bytes.Buffer)
+		bufPull.ReadFrom(respPull)
+		//bufPull.String()
 
 		if err != nil {
 			panic(err)
@@ -412,7 +412,7 @@ func exec(w http.ResponseWriter, req *http.Request) {
 	newreq.RemoteAddr = req.RemoteAddr
 	newreq.Header.Set("User-Agent", req.UserAgent())
 	// Doing req
-	resp_http, err := client.Do(newreq)
+	respHttp, err := client.Do(newreq)
 
 	if err != nil {
 		// Env var
@@ -432,13 +432,13 @@ func exec(w http.ResponseWriter, req *http.Request) {
 		}, nil, nil, "")
 		if err != nil {
 			// Trying to pull image
-			resp_pull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
+			respPull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
 				RegistryAuth: "ewogICJ1c2VybmFtZSI6ICIiLAogICJwYXNzd29yZCI6ICIiLAogICJlbWFpbCI6ICIiLAogICJzZXJ2ZXJhZGRyZXNzIjogIiIKfQo=",
 			})
 			// Wait pull finish
-			buf_pull := new(bytes.Buffer)
-			buf_pull.ReadFrom(resp_pull)
-			buf_pull.String()
+			bufPull := new(bytes.Buffer)
+			bufPull.ReadFrom(respPull)
+			//bufPull.String()
 
 			if err != nil {
 				panic(err)
@@ -489,9 +489,9 @@ func exec(w http.ResponseWriter, req *http.Request) {
 		_ = dockercli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
 
 	} else {
-		defer resp_http.Body.Close()
+		defer respHttp.Body.Close()
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp_http.Body)
+		buf.ReadFrom(respHttp.Body)
 		fmt.Fprint(w, buf.String())
 	}
 
@@ -526,13 +526,13 @@ func create(w http.ResponseWriter, req *http.Request) {
 	//app += baseStruct.PreCode + "\n"
 	app := ""
 	if url != "" {
-		resp_http, err := http.Get(url)
+		respHttp, err := http.Get(url)
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer resp_http.Body.Close()
+		defer respHttp.Body.Close()
 		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp_http.Body)
+		buf.ReadFrom(respHttp.Body)
 		app = buf.String()
 	} else {
 		app = body
@@ -622,19 +622,19 @@ func create(w http.ResponseWriter, req *http.Request) {
 	//dockercli.ImageBuild(context.Background(), buildCtx, buildOptions)
 
 	// Push image if registry
-	result_push := ""
+	resultPush := ""
 	if registry != "" {
-		response_push, err := dockercli.ImagePush(context.Background(), registry+tag, types.ImagePushOptions{
+		responsePush, err := dockercli.ImagePush(context.Background(), registry+tag, types.ImagePushOptions{
 			RegistryAuth: "ewogICJ1c2VybmFtZSI6ICIiLAogICJwYXNzd29yZCI6ICIiLAogICJlbWFpbCI6ICIiLAogICJzZXJ2ZXJhZGRyZXNzIjogIiIKfQo=",
 		})
 		if err != nil {
 			log.Fatalln(err)
 		}
 		buf3 := new(bytes.Buffer)
-		buf3.ReadFrom(response_push)
-		result_push = buf3.String()
+		buf3.ReadFrom(responsePush)
+		resultPush = buf3.String()
 		/*fmt.Fprintln(w, "Push:")
-		fmt.Fprintln(w, result_push, "\n")*/
+		fmt.Fprintln(w, resultPush, "\n")*/
 	}
 
 	full_response := createResponse{
@@ -643,7 +643,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 		Dockerfile: dockerfile,
 		Code:       app,
 		CreateLog:  result,
-		PushLog:    result_push,
+		PushLog:    resultPush,
 	}
 
 	json_result, err := json.Marshal(full_response)

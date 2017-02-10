@@ -4,7 +4,6 @@
 [![Go Report Card](https://goreportcard.com/badge/nanoserverless/nanoserverless)](http://goreportcard.com/report/nanoserverless/nanoserverless)
 [![](https://images.microbadger.com/badges/image/nanoserverless/nanoserverless.svg)](https://microbadger.com/images/nanoserverless/nanoserverless)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/nanoserverless/nanoserverless/blob/master/LICENSE.md)
-<a href="https://travis-ci.org/nanoserverless/nanoserverless" target="blank"><img src="https://travis-ci.org/nanoserverless/nanoserverless.svg?branch=master" height="20"/></a>
 
 ## Example
 You can test that on http://play-with-docker.com

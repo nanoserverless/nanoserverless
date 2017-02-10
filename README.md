@@ -2,15 +2,7 @@
 <a href="https://hub.docker.com/r/nanoserverless/nanoserverless" target="blank"><img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_(container_engine)_logo.png" height="20"/></a>  
 <a href="https://travis-ci.org/nanoserverless/nanoserverless" target="blank"><img src="https://travis-ci.org/nanoserverless/nanoserverless.svg?branch=master" height="20"/></a>  
 
-## Up in seconds
-```
-docker run -d \
-  -p 1664:3000 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  --name nanoserverless nanoserverless/nanoserverless:master-light
-```
-
-## Up in swarm mode
+## Up service
 ```
 docker network create -d overlay nanoserverless
 docker service create \
@@ -21,59 +13,37 @@ docker service create \
   nanoserverless/nanoserverless:master-light
 ```
 
-### Create php7 func
+## Example
+### Create pi function in node7 (time to build FROM node:7 image)
 ```
-curl -X POST \
-  'http://<ip_docker>:1664/php7/showparams/create' \
-  -d 'print(json_encode($_ENV));'
-```
-Result :
-```
-Image  nanoserverless-php7-showparams created !
-
-Dockerfile:
-FROM php:7
-COPY app /
-ENTRYPOINT ["php", "app"]
-
-Code:
-<?php
-print(json_encode($_ENV));
-?>
-
-Log:
-{"stream":"sha256:b7cf52ddccaeb003270e4b513037d64847baeb3061063bb367545945a2d99ecf\n"}
+time curl 'http://<ip_manager>:<port>/node7/pi/create?url=https://raw.githubusercontent.com/nanoserverless/nanoserverless/master/examples/pi/pi.js'
+real    0m6.701s
 ```
 
-### Create node7 func
+### Exec that function (in serverless mode)
 ```
-curl -X POST \
-  'http://<ip_docker>:1664/node7/showparams/create' \
-  -d 'console.log(JSON.stringify(process.env));'
-```
-Result :
-```
-Image  nanoserverless-node7-showparams created !
-
-Dockerfile:
-FROM node:7
-COPY app /
-ENTRYPOINT ["node", "app"]
-
-Code:
-console.log(JSON.stringify(process.env));
-
-
-Log:
-{"stream":"sha256:e4b329b11f9d355273f643e1b275b613a075ddc2d38d830254cb48f6a861404c\n"}
+time curl 'http://<ip_manager>:<port>/node7/pi/exec'
+3.1415926445762157
+real    0m0.891s
 ```
 
-### Exec php7 func
+### Up a service for that function
 ```
-curl 'http://<ip_docker>:1664/php7/showparams/exec?p1=parm1&p2=parm2' | python -m json.tool
+time curl 'http://<ip_manager>:<port>/node7/pi/up'
+Service id  pylnihmv8w0ymuf3ovniuzuvb created
+real    0m0.061s
 ```
 
-### Exec node7 func
+### Exec that function (in service mode now)
 ```
-curl 'http://<ip_docker>:1664/node7/showparams/exec?p1=parm1&p2=parm2' | python -m json.tool
+time curl 'http://<ip_manager>:<port>:10080/node7/pi/exec'
+3.1415926445762157
+real    0m0.440s
+```
+
+### Down service
+```
+time curl 'http://<ip_manager>:<port>/node7/pi/down'
+Service nanoserverless-node7-pi removed
+real    0m0.015s
 ```

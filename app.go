@@ -394,7 +394,11 @@ func exec(w http.ResponseWriter, req *http.Request) {
 	ctx := context.Background()
 
 	// Test if we can http to the service
-	resp_http, err := http.Get("http://" + servicename)
+	tr := &http.Transport{
+		Proxy: nil,
+	}
+	client := &http.Client{Transport: tr}
+	resp_http, err := client.Get("http://" + servicename)
 	if err != nil {
 		// Create
 		resp, err := dockercli.ContainerCreate(ctx, &container.Config{

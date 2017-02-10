@@ -28,11 +28,10 @@ var tagprefix = "nanoserverless"
 var registry string
 
 type base struct {
-  Run string
-  FromImg string
-  ExtraBuild string
-  PreCode string
-  PostCode string
+	Run        string
+	ViewCode   []string
+	FromImg    string
+	ExtraBuild string
 }
 
 var bases = make(map[string]base)
@@ -43,16 +42,30 @@ func init() {
 	if registry != "" {
 		registry += "/"
 	}
-  bases["php7"] = base{"#!/bin/sh\nphp app", "php:7", "", "<?php", "?>"}
-  bases["node7"] = base{"#!/bin/sh\nnode app", "node:7", "", "", ""}
-  bases["java8"] = base{
-    "#!/bin/sh\njava app",
-    "openjdk:8",
-    "RUN mv app app.java && javac app.java",
-    "public class app {\npublic static void main(String[] args) {",
-    "}\n}",
-  }
-  bases["go17"] = base{"", "golang:1.7", "WORKDIR /go/src\nENV CGO_ENABLED=0\nENV GO_PATH=/go/src\nRUN mv /app ./app.go && go build -a --installsuffix cgo --ldflags=-s -o /run", "package main\nimport \"fmt\"\nfunc init() {}\nfunc main() {", "}"}
+	bases["php7"] = base{
+		"#!/bin/sh\nphp app",
+		[]string{"cat", "/app"},
+		"php:7",
+		"",
+	}
+	bases["node7"] = base{
+		"#!/bin/sh\nnode app",
+		[]string{"cat", "/app"},
+		"node:7",
+		"",
+	}
+	bases["java8"] = base{
+		"#!/bin/sh\njava app",
+		[]string{"cat", "/app.java"},
+		"openjdk:8",
+		"RUN mv app app.java && javac app.java",
+	}
+	bases["go17"] = base{
+		"",
+		[]string{"cat", "/go/src/app.go"},
+		"golang:1.7",
+		"WORKDIR /go/src\nENV CGO_ENABLED=0\nENV GO_PATH=/go/src\nRUN mv /app ./app.go && go build -a --installsuffix cgo --ldflags=-s -o /run",
+	}
 }
 
 func main() {
@@ -68,6 +81,7 @@ func main() {
 	r.HandleFunc("/{base}/{name}/exec", exec)
 	r.HandleFunc("/{base}/{name}/up", up)
 	r.HandleFunc("/{base}/{name}/down", down)
+	r.HandleFunc("/{base}/{name}/code", code)
 	r.HandleFunc("/whoami", whoami)
 	http.Handle("/", r)
 	fmt.Println("Starting up on port " + port)
@@ -214,23 +228,102 @@ func up(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(w, "Service id ", resp.ID, "created")
 }
 
+func code(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	base := vars["base"]
+	name := vars["name"]
+	tag := tagprefix + "-" + base + "-" + name
+	ctx := context.Background()
+
+	baseStruct, ok := bases[base]
+	if !ok {
+		fmt.Fprintln(w, base, "not supported yet !")
+		return
+	}
+
+	// Create
+	resp, err := dockercli.ContainerCreate(ctx, &container.Config{
+		Image:      registry + tag,
+		Entrypoint: baseStruct.ViewCode,
+		//      AttachStdout: true,
+	}, nil, nil, "")
+	if err != nil {
+		// Trying to pull image
+		resp_pull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
+			RegistryAuth: "ewogICJ1c2VybmFtZSI6ICIiLAogICJwYXNzd29yZCI6ICIiLAogICJlbWFpbCI6ICIiLAogICJzZXJ2ZXJhZGRyZXNzIjogIiIKfQo=",
+		})
+		// Wait pull finish
+		buf_pull := new(bytes.Buffer)
+		buf_pull.ReadFrom(resp_pull)
+		buf_pull.String()
+
+		if err != nil {
+			panic(err)
+		}
+
+		resp, err = dockercli.ContainerCreate(ctx, &container.Config{
+			Image:      registry + tag,
+			Entrypoint: baseStruct.ViewCode,
+		}, nil, nil, "")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	// Run
+	if err := dockercli.ContainerStart(ctx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		panic(err)
+	}
+
+	// Wait
+	if _, err = dockercli.ContainerWait(ctx, resp.ID); err != nil {
+		panic(err)
+	}
+
+	// Logs
+	responseBody, err := dockercli.ContainerLogs(ctx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
+	if err != nil {
+		panic(err)
+	}
+	defer responseBody.Close()
+
+	// Print
+	/*buf := new(bytes.Buffer)
+	  buf.ReadFrom(out)
+	  result := buf.String()
+	  fmt.Fprintln(w, result)*/
+
+	//io.Copy(w, []byte(out))
+	/*fmt.Fprintln(w, "Result:")
+	  buf := new(bytes.Buffer)
+	  buf.ReadFrom(responseBody)
+	  newStr := buf.String()*/
+
+	stdcopy.StdCopy(w, w, responseBody)
+	//fmt.Fprintln(w, newStr)
+
+	// Delete
+	_ = dockercli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
+
+}
+
 func exec(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	base := vars["base"]
 	name := vars["name"]
 	tag := tagprefix + "-" + base + "-" + name
-	containername := tag
+	servicename := tag
 	ctx := context.Background()
 
-	// Test if we can http to the container
-	resp_http, err := http.Get("http://" + containername)
+	// Test if we can http to the service
+	resp_http, err := http.Get("http://" + servicename)
 	if err != nil {
 		// Create
 		resp, err := dockercli.ContainerCreate(ctx, &container.Config{
 			Image:      registry + tag,
 			Entrypoint: []string{"/run"},
 			//      AttachStdout: true,
-		}, nil, nil, containername)
+		}, nil, nil, "")
 		if err != nil {
 			// Trying to pull image
 			resp_pull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
@@ -248,7 +341,7 @@ func exec(w http.ResponseWriter, req *http.Request) {
 			resp, err = dockercli.ContainerCreate(ctx, &container.Config{
 				Image:      registry + tag,
 				Entrypoint: []string{"/run"},
-			}, nil, nil, containername)
+			}, nil, nil, "")
 			if err != nil {
 				panic(err)
 			}
@@ -306,29 +399,29 @@ func create(w http.ResponseWriter, req *http.Request) {
 	bodyb, _ := ioutil.ReadAll(req.Body)
 	body := string(bodyb)
 
-  baseStruct, ok := bases[base]
-  if ! ok {
-    fmt.Fprintln(w, base, "not supported yet !")
-    return
-  }
+	baseStruct, ok := bases[base]
+	if !ok {
+		fmt.Fprintln(w, base, "not supported yet !")
+		return
+	}
 
 	// Generate dockerfile
 	dockerfile := "FROM "
-  dockerfile += baseStruct.FromImg
+	dockerfile += baseStruct.FromImg
 	dockerfile += "\nCOPY shell2http /"
 	dockerfile += "\nCOPY app /"
 	dockerfile += "\nCOPY run /"
-  dockerfile += "\n" + baseStruct.ExtraBuild
-  dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-port=80\", \"-cgi\", \"-export-all-vars\", \"/\", \"/run\"]"
+	dockerfile += "\n" + baseStruct.ExtraBuild
+	dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-port=80\", \"-cgi\", \"-export-all-vars\", \"/\", \"/run\"]"
 
 	// Generate app
-	app := ""
-  app += baseStruct.PreCode + "\n"
-	app += body + "\n"
-  app += baseStruct.PostCode
+	//app := ""
+	//app += baseStruct.PreCode + "\n"
+	app := body
+	//app += baseStruct.PostCode
 
 	// Generate run
-  run := baseStruct.Run
+	run := baseStruct.Run
 
 	// Buffer context
 	buf := new(bytes.Buffer)

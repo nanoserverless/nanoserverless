@@ -467,6 +467,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 	tag := tagprefix + "-" + base + "-" + name
 	bodyb, _ := ioutil.ReadAll(req.Body)
 	body := string(bodyb)
+	url := req.URL.Query().Get("url")
 
 	baseStruct, ok := bases[base]
 	if !ok {
@@ -486,7 +487,19 @@ func create(w http.ResponseWriter, req *http.Request) {
 	// Generate app
 	//app := ""
 	//app += baseStruct.PreCode + "\n"
-	app := body
+	app := ""
+	if url != "" {
+		resp_http, err := http.Get(url)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer resp_http.Body.Close()
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp_http.Body)
+		app = buf.String()
+	} else {
+		app = body
+	}
 	//app += baseStruct.PostCode
 
 	// Generate run

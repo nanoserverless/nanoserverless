@@ -85,6 +85,12 @@ func init() {
 		"python:2.7",
 		"",
 	}
+	bases["bash4"] = base{
+		"#!/bin/sh\nbash app",
+		[]string{"cat", "/app"},
+		"bash:4",
+		"",
+	}
 }
 
 func main() {

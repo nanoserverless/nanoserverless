@@ -14,11 +14,13 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gorilla/mux"
 	//"io"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -41,7 +43,9 @@ func init() {
 	registry = os.Getenv("REGISTRY_URL")
 	if registry != "" {
 		registry += "/"
+		synchroRepo()
 	}
+
 	bases["php7"] = base{
 		"#!/bin/sh\nphp app",
 		[]string{"cat", "/app"},
@@ -80,6 +84,7 @@ func main() {
 
 	// Router
 	r := mux.NewRouter()
+	r.HandleFunc("/list", list)
 	r.HandleFunc("/{base}/{name}", infofunc)
 	r.HandleFunc("/{base}/{name}/create", create)
 	r.HandleFunc("/{base}/{name}/exec", exec)
@@ -107,6 +112,66 @@ func whoami(w http.ResponseWriter, req *http.Request) {
 	fmt.Fprintln(w, "Hostname:", hostname)
 
 	req.Write(w)
+}
+
+func synchroRepo() {
+	ctx := context.Background()
+	resp_http, err := http.Get("http://" + registry + "v2/_catalog")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer resp_http.Body.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(resp_http.Body)
+	//fmt.Fprint(w, buf.String())
+	type Repos struct {
+		Repositories []string `json:"repositories"`
+	}
+	var repos Repos
+	err = json.Unmarshal(buf.Bytes(), &repos)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+	for _, tag := range repos.Repositories {
+		// Pull all start by "tagprefix-"
+		if strings.HasPrefix(tag, tagprefix+"-") {
+			fmt.Println("Pulling image :", registry+tag)
+			// Trying to pull image
+			resp_pull, err := dockercli.ImagePull(ctx, registry+tag, types.ImagePullOptions{
+				RegistryAuth: "ewogICJ1c2VybmFtZSI6ICIiLAogICJwYXNzd29yZCI6ICIiLAogICJlbWFpbCI6ICIiLAogICJzZXJ2ZXJhZGRyZXNzIjogIiIKfQo=",
+			})
+			// Wait pull finish
+			buf_pull := new(bytes.Buffer)
+			buf_pull.ReadFrom(resp_pull)
+			buf_pull.String()
+			if err != nil {
+				panic(err)
+			}
+		}
+	}
+
+}
+
+func list(w http.ResponseWriter, req *http.Request) {
+	ctx := context.Background()
+
+	// Get images from registry
+	if registry != "" {
+		synchroRepo()
+	}
+
+	// List local images
+	images, err := dockercli.ImageList(ctx, types.ImageListOptions{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, image := range images {
+		for _, tag := range image.RepoTags {
+			if strings.HasPrefix(tag, registry+tagprefix+"-") {
+				fmt.Fprintln(w, "local tag", tag)
+			}
+		}
+	}
 }
 
 func infofunc(w http.ResponseWriter, req *http.Request) {

@@ -18,7 +18,7 @@ docker service create \
   --mount type=bind,source=/var/run/docker.sock,destination=/var/run/docker.sock \
   --network nanoserverless \
   --publish 1664:80 \
-  nanoserverless/nanoserverless:master-light
+  nanoserverless/nanoserverless:master
 ```
 
 ### Create pi function in node7 (time to build FROM node:7 image)

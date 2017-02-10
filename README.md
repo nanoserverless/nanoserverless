@@ -58,6 +58,6 @@ real    0m0.015s
 
 ## Next
 ### Multiple nodes
-If you have a swarm cluster, you need to tell nanoserverless with registry you want to use to push function images on.  
-Others nodes must have access to this registry in order to pull images when running functions  
-The environment variable REGISTRY can be set to plugin registry  
+If you have a swarm cluster, you need to place the REGISTRY environment variable  
+Creating function will push image to that registry  
+So other nodes can pull if needed  

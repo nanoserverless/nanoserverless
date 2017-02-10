@@ -66,6 +66,12 @@ func init() {
 		"golang:1.7",
 		"WORKDIR /go/src\nENV CGO_ENABLED=0\nENV GO_PATH=/go/src\nRUN mv /app ./app.go && go build -a --installsuffix cgo --ldflags=-s -o /run",
 	}
+	bases["python27"] = base{
+		"#!/bin/sh\npython app",
+		[]string{"cat", "/app"},
+		"python:2.7",
+		"",
+	}
 }
 
 func main() {

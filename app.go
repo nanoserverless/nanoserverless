@@ -36,6 +36,15 @@ type base struct {
 	ExtraBuild string
 }
 
+type createResponse struct {
+	Base       string
+	Image      string
+	Dockerfile string
+	Code       string
+	CreateLog  string
+	PushLog    string
+}
+
 var bases = make(map[string]base)
 
 func init() {
@@ -571,18 +580,21 @@ func create(w http.ResponseWriter, req *http.Request) {
 	buf2 := new(bytes.Buffer)
 	buf2.ReadFrom(response.Body)
 	result := buf2.String()
-	fmt.Fprintln(w, "Image ", registry+tag, "created !\n")
+
+	/*fmt.Fprintln(w, "Image ", registry+tag, "created !\n")
 	fmt.Fprintln(w, "Dockerfile:")
 	fmt.Fprintln(w, dockerfile, "\n")
 	fmt.Fprintln(w, "Code:")
 	fmt.Fprintln(w, app, "\n")
 	fmt.Fprintln(w, "Log:")
-	fmt.Fprintln(w, result, "\n")
+	fmt.Fprintln(w, result, "\n")*/
+
 	//fmt.Fprintln(w, "response:", response.Body)
 	//buildCtx := ioutil.NopCloser(reader)
 	//dockercli.ImageBuild(context.Background(), buildCtx, buildOptions)
 
 	// Push image if registry
+	result_push := ""
 	if registry != "" {
 		response_push, err := dockercli.ImagePush(context.Background(), registry+tag, types.ImagePushOptions{
 			RegistryAuth: "ewogICJ1c2VybmFtZSI6ICIiLAogICJwYXNzd29yZCI6ICIiLAogICJlbWFpbCI6ICIiLAogICJzZXJ2ZXJhZGRyZXNzIjogIiIKfQo=",
@@ -592,8 +604,23 @@ func create(w http.ResponseWriter, req *http.Request) {
 		}
 		buf3 := new(bytes.Buffer)
 		buf3.ReadFrom(response_push)
-		result_push := buf3.String()
-		fmt.Fprintln(w, "Push:")
-		fmt.Fprintln(w, result_push, "\n")
+		result_push = buf3.String()
+		/*fmt.Fprintln(w, "Push:")
+		fmt.Fprintln(w, result_push, "\n")*/
 	}
+
+	full_response := createResponse{
+		Base:       base,
+		Image:      registry + tag,
+		Dockerfile: dockerfile,
+		Code:       app,
+		CreateLog:  result,
+		PushLog:    result_push,
+	}
+
+	json_result, err := json.Marshal(full_response)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	fmt.Fprintln(w, string(json_result))
 }

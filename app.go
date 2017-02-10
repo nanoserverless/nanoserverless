@@ -397,6 +397,7 @@ func exec(w http.ResponseWriter, req *http.Request) {
 	name := vars["name"]
 	tag := tagprefix + "-" + base + "-" + name
 	servicename := tag
+	query := req.URL.RawQuery
 	ctx := context.Background()
 
 	// Test if we can http to the service
@@ -404,12 +405,29 @@ func exec(w http.ResponseWriter, req *http.Request) {
 		Proxy: nil,
 	}
 	client := &http.Client{Transport: tr}
-	resp_http, err := client.Get("http://" + servicename)
+	newreq, err := http.NewRequest(req.Method, "http://"+servicename, nil)
+	// Passing query and body
+	newreq.URL.RawQuery = query
+	newreq.Body = req.Body
+	newreq.RemoteAddr = req.RemoteAddr
+	newreq.Header.Set("User-Agent", req.UserAgent())
+	// Doing req
+	resp_http, err := client.Do(newreq)
+
 	if err != nil {
+		// Env var
+		env := []string{}
+		env = append(env, "QUERY_STRING="+query)
+		env = append(env, "REQUEST_METHOD="+req.Method)
+		env = append(env, "HTTP_USER_AGENT="+req.UserAgent())
+		env = append(env, "REMOTE_ADDR="+req.RemoteAddr)
+		env = append(env, "SERVER_PROTOCOL="+req.Proto)
+
 		// Create
 		resp, err := dockercli.ContainerCreate(ctx, &container.Config{
 			Image:      registry + tag,
 			Entrypoint: []string{"/run"},
+			Env:        env,
 			//      AttachStdout: true,
 		}, nil, nil, "")
 		if err != nil {

@@ -11,7 +11,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/swarm"
 	"github.com/docker/docker/client"
-	//"github.com/docker/docker/pkg/stdcopy"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/gorilla/mux"
 	//"io"
 	"io/ioutil"
@@ -27,12 +27,31 @@ var dockercli, err = client.NewClient("unix:///var/run/docker.sock", "v1.25", ni
 var tagprefix = "nanoserverless"
 var registry string
 
+type base struct {
+  Run string
+  FromImg string
+  ExtraBuild string
+  PreCode string
+  PostCode string
+}
+
+var bases = make(map[string]base)
+
 func init() {
 	flag.StringVar(&port, "port", "80", "give me a port number")
 	registry = os.Getenv("REGISTRY_URL")
 	if registry != "" {
 		registry += "/"
 	}
+  bases["php7"] = base{"#!/bin/sh\nphp app", "php:7", "", "<?php", "?>"}
+  bases["node7"] = base{"#!/bin/sh\nnode app", "node:7", "", "", ""}
+  bases["java8"] = base{
+    "#!/bin/sh\njava app",
+    "openjdk:8",
+    "RUN mv app app.java && javac app.java",
+    "public class app {\npublic static void main(String[] args) {",
+    "}\n}",
+  }
 }
 
 func main() {
@@ -202,14 +221,6 @@ func exec(w http.ResponseWriter, req *http.Request) {
 	containername := tag
 	ctx := context.Background()
 
-	/*cmd := []string{}
-	if base == "php7" {
-		cmd = []string{"php", "app"}
-	}
-	if base == "node7" {
-		cmd = []string{"node", "app"}
-	}*/
-
 	// Test if we can http to the container
 	resp_http, err := http.Get("http://" + containername)
 	if err != nil {
@@ -266,13 +277,13 @@ func exec(w http.ResponseWriter, req *http.Request) {
 		  fmt.Fprintln(w, result)*/
 
 		//io.Copy(w, []byte(out))
-		fmt.Fprintln(w, "Result:")
+		/*fmt.Fprintln(w, "Result:")
 		buf := new(bytes.Buffer)
 		buf.ReadFrom(responseBody)
-		newStr := buf.String()
+		newStr := buf.String()*/
 
-		//stdcopy.StdCopy(w, w, responseBody)
-		fmt.Fprintln(w, newStr)
+		stdcopy.StdCopy(w, w, responseBody)
+		//fmt.Fprintln(w, newStr)
 
 		// Delete
 		_ = dockercli.ContainerRemove(ctx, resp.ID, types.ContainerRemoveOptions{Force: true})
@@ -294,46 +305,29 @@ func create(w http.ResponseWriter, req *http.Request) {
 	bodyb, _ := ioutil.ReadAll(req.Body)
 	body := string(bodyb)
 
+  baseStruct, ok := bases[base]
+  if ! ok {
+    fmt.Fprintln(w, base, "not supported yet !")
+    return
+  }
+
 	// Generate dockerfile
 	dockerfile := "FROM "
-	if base == "php7" {
-		dockerfile += "php:7"
-	}
-	if base == "node7" {
-		dockerfile += "node:7"
-	}
+  dockerfile += baseStruct.FromImg
 	dockerfile += "\nCOPY shell2http /"
 	dockerfile += "\nCOPY app /"
 	dockerfile += "\nCOPY run /"
-	if base == "php7" {
-		dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-port=80\", \"-cgi\", \"-export-all-vars\", \"/\", \"/run\"]"
-	}
-	if base == "node7" {
-		dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-port=80\", \"-cgi\", \"-export-all-vars\", \"/\", \"/run\"]"
-	}
+  dockerfile += "\n" + baseStruct.ExtraBuild
+  dockerfile += "\nENTRYPOINT [\"/shell2http\", \"-port=80\", \"-cgi\", \"-export-all-vars\", \"/\", \"/run\"]"
 
 	// Generate app
 	app := ""
-	if base == "php7" {
-		//app += "<?php\nparse_str($argv[1], $params);\n"
-		app += "<?php\n"
-	}
-	/*if base == "node7" {
-		app += "var querystring = require('querystring');\nvar params = querystring.parse(process.argv[2]);\n"
-	}*/
+  app += baseStruct.PreCode + "\n"
 	app += body + "\n"
-	if base == "php7" {
-		app += "?>"
-	}
+  app += baseStruct.PostCode
 
 	// Generate run
-	run := ""
-	if base == "php7" {
-		run += "#!/bin/sh\nphp app"
-	}
-	if base == "node7" {
-		run += "#!/bin/sh\nnode app"
-	}
+  run := baseStruct.Run
 
 	// Buffer context
 	buf := new(bytes.Buffer)

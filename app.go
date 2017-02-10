@@ -637,7 +637,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 		fmt.Fprintln(w, resultPush, "\n")*/
 	}
 
-	full_response := createResponse{
+	fullResponse := createResponse{
 		Base:       base,
 		Image:      registry + tag,
 		Dockerfile: dockerfile,
@@ -646,7 +646,7 @@ func create(w http.ResponseWriter, req *http.Request) {
 		PushLog:    resultPush,
 	}
 
-	json_result, err := json.Marshal(full_response)
+	json_result, err := json.Marshal(fullResponse)
 	if err != nil {
 		log.Fatalln(err)
 	}

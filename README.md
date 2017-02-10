@@ -1,7 +1,9 @@
 # nanoserverless
 <a href="https://hub.docker.com/r/nanoserverless/nanoserverless" target="blank"><img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_(container_engine)_logo.png" height="20"/></a>
-<a href="https://microbadger.com/images/nanoserverless/nanoserverless" target="blank"><img src="https://images.microbadger.com/badges/image/nanoserverless/nanoserverless.svg" height="20"/></a>
-[![Go Report Card](https://goreportcard.com/badge/github.com/nanoserverless/nanoserverless)](https://goreportcard.com/report/github.com/nanoserverless/nanoserverless)
+[![Build Status](https://travis-ci.org/nanoserverless/nanoserverless.svg?branch=master)](https://travis-ci.org/nanoserverless/nanoserverless)
+[![Go Report Card](https://goreportcard.com/badge/nanoserverless/nanoserverless)](http://goreportcard.com/report/nanoserverless/nanoserverless)
+[![](https://images.microbadger.com/badges/image/nanoserverless/nanoserverless.svg)](https://microbadger.com/images/nanoserverless/nanoserverless)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/nanoserverless/nanoserverless/blob/master/LICENSE.md)
 <a href="https://travis-ci.org/nanoserverless/nanoserverless" target="blank"><img src="https://travis-ci.org/nanoserverless/nanoserverless.svg?branch=master" height="20"/></a>
 
 ## Example

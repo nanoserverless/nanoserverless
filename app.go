@@ -78,8 +78,6 @@ func main() {
 	// defer profile.Start().Stop()
 	flag.Parse()
 
-	// Docker
-
 	// Router
 	r := mux.NewRouter()
 	r.HandleFunc("/{base}/{name}", infofunc)

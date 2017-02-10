@@ -1,5 +1,5 @@
 # nanoserverless
-<a href="https://hub.docker.com/r/nanoserverless/nanoserverless" target="blank"><img src="https://upload.wikimedia.org/wikipedia/commons/7/79/Docker_(container_engine)_logo.png" height="20"/></a>
+[![Docker Automated buil](https://img.shields.io/docker/automated/nanoserverless/nanoserverless.svg)](https://hub.docker.com/r/nanoserverless/nanoserverless/)
 [![Build Status](https://travis-ci.org/nanoserverless/nanoserverless.svg?branch=master)](https://travis-ci.org/nanoserverless/nanoserverless)
 [![Go Report Card](https://goreportcard.com/badge/nanoserverless/nanoserverless)](http://goreportcard.com/report/nanoserverless/nanoserverless)
 [![](https://images.microbadger.com/badges/image/nanoserverless/nanoserverless.svg)](https://microbadger.com/images/nanoserverless/nanoserverless)

@@ -4,11 +4,14 @@ services:
   - docker
 
 script:
+  - curl -L "https://github.com/msoap/shell2http/releases/download/1.8/shell2http-1.8.linux.amd64.tar.gz" | tar xzf - shell2http
+  - chmod 700 shell2http
   - docker build -t nanoserverless/nanoserverless:$TRAVIS_BRANCH -f Dockerfile.build .
   - id=$(docker create nanoserverless/nanoserverless:$TRAVIS_BRANCH)
   - docker cp $id:/go/src/nanoserverless nanoserverless
   - docker rm -f $id
   - docker build -t nanoserverless/nanoserverless:$TRAVIS_BRANCH-light -f Dockerfile .
+  - rm -f shell2http
   - echo "my@mail.com" | docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
   - docker push nanoserverless/nanoserverless:$TRAVIS_BRANCH-light
   - docker push nanoserverless/nanoserverless:$TRAVIS_BRANCH

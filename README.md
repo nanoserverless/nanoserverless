@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/nanoserverless/nanoserverless/blob/master/LICENSE.md)
 [![Docker Automated buil](https://img.shields.io/badge/docker--hub-automatic--build-blue.svg)](https://hub.docker.com/r/nanoserverless/nanoserverless/)
 
-# ABANDONNED
+# ABANDONED
 Cause there is other projects for that now, like :  
 https://github.com/alexellis/faas  
 https://github.com/iron-io/functions  
